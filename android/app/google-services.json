@@ -1,37 +1,26 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "firebase_url": "https://mind-fence-app-default-rtdb.firebaseio.com",
-    "project_id": "mind-fence-app",
-    "storage_bucket": "mind-fence-app.appspot.com"
+    "project_number": "226522367180",
+    "project_id": "mind-fence",
+    "storage_bucket": "mind-fence.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abc123def456",
+        "mobilesdk_app_id": "1:226522367180:android:94bc234171a8ad9fc7ee69",
         "android_client_info": {
-          "package_name": "com.mindfence.app.mind_fence"
+          "package_name": "com.opticodelab.mindfence"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAbCdEfGhIjKlMnOpQrStUvWxYz123456789"
+          "current_key": "AIzaSyARGeqMqXASbr-Fv3_vMBscu-vaia_2x0k"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

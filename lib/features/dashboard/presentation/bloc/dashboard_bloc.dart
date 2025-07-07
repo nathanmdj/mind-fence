@@ -1,15 +1,20 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:injectable/injectable.dart';
 
 import '../../../../shared/domain/entities/blocked_app.dart';
 import '../../../../shared/domain/entities/focus_session.dart';
 import '../../../../shared/domain/entities/usage_stats.dart';
+import '../../../../shared/domain/repositories/blocked_apps_repository.dart';
 
 part 'dashboard_event.dart';
 part 'dashboard_state.dart';
 
+@injectable
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
-  DashboardBloc() : super(DashboardInitial()) {
+  final BlockedAppsRepository _blockedAppsRepository;
+  
+  DashboardBloc(this._blockedAppsRepository) : super(DashboardInitial()) {
     on<DashboardInitialized>(_onDashboardInitialized);
     on<DashboardRefreshed>(_onDashboardRefreshed);
     on<BlockingStatusToggled>(_onBlockingStatusToggled);
@@ -24,22 +29,23 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     emit(DashboardLoading());
     
     try {
-      // Simulate loading data
-      await Future.delayed(const Duration(seconds: 1));
+      // Get real data from repositories
+      final isBlocking = await _blockedAppsRepository.isBlocking();
+      final blockedApps = await _blockedAppsRepository.getBlockedApps();
       
-      // Mock data - replace with real data from repositories
-      final mockData = DashboardData(
-        blockedApps: _getMockBlockedApps(),
+      final dashboardData = DashboardData(
+        blockedApps: blockedApps,
         currentFocusSession: _getMockFocusSession(),
         todayStats: _getMockUsageStats(),
-        isBlockingActive: true,
+        isBlockingActive: isBlocking,
         totalScreenTime: 240, // 4 hours in minutes
         productivityScore: 85.0,
         streakDays: 7,
       );
       
-      emit(DashboardLoaded(data: mockData));
+      emit(DashboardLoaded(data: dashboardData));
     } catch (error) {
+      print('Error initializing dashboard: $error');
       emit(DashboardError(message: error.toString()));
     }
   }
@@ -59,16 +65,31 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final currentState = state as DashboardLoaded;
       
       try {
-        // Simulate blocking toggle
-        await Future.delayed(const Duration(milliseconds: 500));
+        final newBlockingState = !currentState.data.isBlockingActive;
+        
+        if (newBlockingState) {
+          // Start blocking - get blocked apps package names
+          final blockedAppsPackages = currentState.data.blockedApps
+              .where((app) => app.isBlocked)
+              .map((app) => app.packageName)
+              .toList();
+          
+          print('Starting blocking with apps: $blockedAppsPackages');
+          await _blockedAppsRepository.startBlocking(blockedAppsPackages);
+        } else {
+          // Stop blocking
+          print('Stopping blocking');
+          await _blockedAppsRepository.stopBlocking();
+        }
         
         final updatedData = currentState.data.copyWith(
-          isBlockingActive: !currentState.data.isBlockingActive,
+          isBlockingActive: newBlockingState,
         );
         
         emit(DashboardLoaded(data: updatedData));
       } catch (error) {
-        emit(DashboardError(message: error.toString()));
+        print('Error toggling blocking: $error');
+        emit(DashboardError(message: 'Failed to toggle blocking: ${error.toString()}'));
       }
     }
   }
@@ -81,8 +102,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final currentState = state as DashboardLoaded;
       
       try {
-        // Simulate starting focus session
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Start blocking with focus session apps
+        await _blockedAppsRepository.startBlocking(event.blockedApps);
         
         final newFocusSession = FocusSession(
           id: 'focus_${DateTime.now().millisecondsSinceEpoch}',
@@ -95,6 +116,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         
         final updatedData = currentState.data.copyWith(
           currentFocusSession: newFocusSession,
+          isBlockingActive: true,
         );
         
         emit(DashboardLoaded(data: updatedData));
@@ -112,11 +134,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final currentState = state as DashboardLoaded;
       
       try {
-        // Simulate stopping focus session
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Stop blocking when focus session ends
+        await _blockedAppsRepository.stopBlocking();
         
         final updatedData = currentState.data.copyWith(
           currentFocusSession: null,
+          isBlockingActive: false,
         );
         
         emit(DashboardLoaded(data: updatedData));
@@ -139,7 +162,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       const BlockedApp(
         id: '2',
         name: 'TikTok',
-        packageName: 'com.tiktok.android',
+        packageName: 'com.zhiliaoapp.musically',
         iconPath: 'assets/icons/tiktok.png',
         isBlocked: true,
         categories: ['Social Media'],

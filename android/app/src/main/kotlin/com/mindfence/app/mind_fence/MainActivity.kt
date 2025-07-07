@@ -14,6 +14,9 @@ import android.net.VpnService
 import android.app.Activity
 import android.provider.Settings.Secure
 import android.text.TextUtils
+import android.content.ComponentName
+import android.app.admin.DevicePolicyManager
+import android.net.Uri
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.mindfence.app/device_control"
@@ -27,32 +30,44 @@ class MainActivity: FlutterActivity() {
         sharedPreferences = getSharedPreferences("mind_fence_prefs", Context.MODE_PRIVATE)
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "requestUsageStatsPermission" -> {
-                    requestUsageStatsPermission()
-                    result.success(null)
-                }
-                "hasUsageStatsPermission" -> {
-                    result.success(hasUsageStatsPermission())
-                }
-                "requestAccessibilityPermission" -> {
-                    requestAccessibilityPermission()
-                    result.success(null)
-                }
-                "hasAccessibilityPermission" -> {
-                    result.success(hasAccessibilityPermission())
-                }
-                "requestDeviceAdminPermission" -> {
-                    requestDeviceAdminPermission()
-                    result.success(null)
-                }
-                "requestOverlayPermission" -> {
-                    requestOverlayPermission()
-                    result.success(null)
-                }
-                "hasOverlayPermission" -> {
-                    result.success(hasOverlayPermission())
-                }
+            try {
+                when (call.method) {
+                    "requestUsageStatsPermission" -> {
+                        requestUsageStatsPermission()
+                        result.success(null)
+                    }
+                    "hasUsageStatsPermission" -> {
+                        result.success(hasUsageStatsPermission())
+                    }
+                    "requestAccessibilityPermission" -> {
+                        requestAccessibilityPermission()
+                        result.success(null)
+                    }
+                    "requestAllPermissions" -> {
+                        requestAllPermissions()
+                        result.success(null)
+                    }
+                    "openAppSettings" -> {
+                        openAppSettings()
+                        result.success(null)
+                    }
+                    "hasAccessibilityPermission" -> {
+                        result.success(hasAccessibilityPermission())
+                    }
+                    "requestDeviceAdminPermission" -> {
+                        requestDeviceAdminPermission()
+                        result.success(null)
+                    }
+                    "hasDeviceAdminPermission" -> {
+                        result.success(hasDeviceAdminPermission())
+                    }
+                    "requestOverlayPermission" -> {
+                        requestOverlayPermission()
+                        result.success(null)
+                    }
+                    "hasOverlayPermission" -> {
+                        result.success(hasOverlayPermission())
+                    }
                 "getInstalledApps" -> {
                     getInstalledApps(result)
                 }
@@ -85,16 +100,28 @@ class MainActivity: FlutterActivity() {
                     stopVpn()
                     result.success(null)
                 }
-                else -> {
-                    result.notImplemented()
+                    else -> {
+                        result.notImplemented()
+                    }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Method channel error: ${call.method}", e)
+                result.error("ERROR", "Failed to execute ${call.method}: ${e.message}", null)
             }
         }
     }
     
     private fun requestUsageStatsPermission() {
-        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-        startActivity(intent)
+        try {
+            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            // Try to direct to our app's usage stats permission page
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                intent.data = Uri.parse("package:$packageName")
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to request usage stats permission", e)
+        }
     }
     
     private fun hasUsageStatsPermission(): Boolean {
@@ -109,8 +136,26 @@ class MainActivity: FlutterActivity() {
     }
     
     private fun requestAccessibilityPermission() {
-        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        startActivity(intent)
+        try {
+            // Try to open the specific accessibility service settings first
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            
+            // Add extra to potentially highlight our service (Android 10+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                intent.putExtra(":settings:fragment_args_key", "${packageName}/${AccessibilityService::class.java.canonicalName}")
+            }
+            
+            startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to request accessibility permission", e)
+            // Fallback to general settings
+            try {
+                val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                startActivity(fallbackIntent)
+            } catch (fallbackException: Exception) {
+                android.util.Log.e("MainActivity", "Failed to open settings", fallbackException)
+            }
+        }
     }
     
     private fun hasAccessibilityPermission(): Boolean {
@@ -134,16 +179,66 @@ class MainActivity: FlutterActivity() {
         return false
     }
     
+    private fun hasDeviceAdminPermission(): Boolean {
+        val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val componentName = ComponentName(this, DeviceAdminReceiver::class.java)
+        return devicePolicyManager.isAdminActive(componentName)
+    }
+    
     private fun requestDeviceAdminPermission() {
-        // TODO: Implement device admin permission request
-        val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
-        startActivity(intent)
+        try {
+            val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            val componentName = ComponentName(this, DeviceAdminReceiver::class.java)
+            
+            if (!devicePolicyManager.isAdminActive(componentName)) {
+                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+                intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, 
+                    "Mind Fence needs device admin permission to block apps effectively")
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to request device admin permission", e)
+        }
     }
     
     private fun requestOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to request overlay permission", e)
+        }
+    }
+    
+    private fun requestAllPermissions() {
+        try {
+            // Open the app's main settings page where all permissions can be managed
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.data = Uri.parse("package:$packageName")
             startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to request all permissions", e)
+            // Fallback to general settings
+            try {
+                val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                startActivity(fallbackIntent)
+            } catch (fallbackException: Exception) {
+                android.util.Log.e("MainActivity", "Failed to open settings", fallbackException)
+            }
+        }
+    }
+    
+    private fun openAppSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.data = Uri.parse("package:$packageName")
+            startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to open app settings", e)
         }
     }
     

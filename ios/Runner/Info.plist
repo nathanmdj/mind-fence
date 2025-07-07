@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Mind Fence</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>mind_fence</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	
+	<!-- Screen Time and Device Activity permissions -->
+	<key>NSScreenTimeUsageDescription</key>
+	<string>Mind Fence needs access to screen time data to track app usage and provide blocking functionality.</string>
+	
+	<!-- Location permissions for location-based blocking -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Mind Fence uses location to enable location-based app blocking features.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Mind Fence uses location to enable location-based app blocking features.</string>
+	
+	<!-- Notifications permissions -->
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Mind Fence sends notifications to remind you about focus sessions and blocking status.</string>
+	
+	<!-- Background app refresh -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-fetch</string>
+		<string>background-processing</string>
+	</array>
+	
+	<!-- Network Extension for VPN-based blocking -->
+	<key>com.apple.developer.networking.networkextension</key>
+	<array>
+		<string>packet-tunnel-provider</string>
+		<string>app-proxy-provider</string>
+	</array>
+	
+	<!-- Family Controls and Screen Time -->
+	<key>com.apple.developer.family-controls</key>
+	<true/>
+	
+	<!-- DeviceActivity -->
+	<key>com.apple.developer.deviceactivity</key>
+	<true/>
+	
+	<!-- Managed Settings -->
+	<key>com.apple.developer.managed-settings</key>
+	<true/>
+	
+	<!-- Shield Configuration -->
+	<key>com.apple.developer.shield-configuration</key>
+	<true/>
+	
+	<!-- App Transport Security -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	
+	<!-- Firebase Configuration -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
+	
+	<!-- Minimum iOS version -->
+	<key>MinimumOSVersion</key>
+	<string>15.0</string>
+</dict>
+</plist>

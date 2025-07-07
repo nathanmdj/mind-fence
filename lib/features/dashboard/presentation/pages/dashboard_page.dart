@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/di/injection_container.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../widgets/blocking_status_card.dart';
 import '../widgets/focus_session_card.dart';
@@ -15,7 +16,7 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => DashboardBloc()..add(const DashboardInitialized()),
+      create: (context) => getIt<DashboardBloc>()..add(const DashboardInitialized()),
       child: const DashboardView(),
     );
   }

@@ -251,6 +251,53 @@ temp/
 **/*.chopper.dart
 **/*.gr.dart
 
+# Additional Flutter/Dart build files
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Additional Android files
+**/android/.gradle/
+**/android/gradle/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/keystore.properties
+**/android/key.properties
+**/android/app/release/
+**/android/app/debug/
+**/android/app/profile/
+
+# Additional iOS files
+**/ios/Podfile.lock
+**/ios/Pods/
+**/ios/DerivedData/
+**/ios/build/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+
+# macOS files
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Generated.xcconfig
+**/macos/Flutter/flutter_export_environment.sh
+
+# Web files
+**/web/packages/
+**/web/.packages
+
+# Windows files
+**/windows/flutter/ephemeral/
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugins.cmake
+
+# Linux files
+**/linux/flutter/ephemeral/
+**/linux/flutter/generated_plugin_registrant.cc
+**/linux/flutter/generated_plugin_registrant.h
+**/linux/flutter/generated_plugins.cmake
+
 # Exceptions to above rules
 !gradle/wrapper/gradle-wrapper.jar
 !/packages/flutter_tools/gradle/wrapper/gradle-wrapper.jar

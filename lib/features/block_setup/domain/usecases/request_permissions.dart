@@ -23,6 +23,10 @@ class RequestPermissions {
     await repository.requestAccessibilityPermission();
   }
 
+  Future<bool> hasDeviceAdminPermission() async {
+    return await repository.hasDeviceAdminPermission();
+  }
+
   Future<void> requestDeviceAdminPermission() async {
     await repository.requestDeviceAdminPermission();
   }
@@ -37,5 +41,13 @@ class RequestPermissions {
 
   Future<bool> requestVpnPermission() async {
     return await repository.requestVpnPermission();
+  }
+  
+  Future<void> requestAllPermissions() async {
+    await repository.requestAllPermissions();
+  }
+  
+  Future<void> openAppSettings() async {
+    await repository.openAppSettings();
   }
 }

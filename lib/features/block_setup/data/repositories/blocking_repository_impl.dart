@@ -3,13 +3,15 @@ import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/repositories/blocking_repository.dart';
 import '../../../../shared/domain/entities/blocked_app.dart';
+import '../../../../shared/data/services/platform_service.dart';
 
 @Injectable(as: BlockingRepository)
 class BlockingRepositoryImpl implements BlockingRepository {
   final MethodChannel _channel;
   final SharedPreferences _prefs;
+  final PlatformService _platformService;
 
-  BlockingRepositoryImpl(this._channel, this._prefs);
+  BlockingRepositoryImpl(this._channel, this._prefs, this._platformService);
 
   @override
   Future<List<BlockedApp>> getInstalledApps() async {
@@ -111,74 +113,57 @@ class BlockingRepositoryImpl implements BlockingRepository {
 
   @override
   Future<bool> hasUsageStatsPermission() async {
-    try {
-      return await _channel.invokeMethod('hasUsageStatsPermission');
-    } catch (e) {
-      return false;
-    }
+    return await _platformService.hasUsageStatsPermission();
   }
 
   @override
   Future<void> requestUsageStatsPermission() async {
-    try {
-      await _channel.invokeMethod('requestUsageStatsPermission');
-    } catch (e) {
-      throw Exception('Failed to request usage stats permission: $e');
-    }
+    await _platformService.requestUsageStatsPermission();
   }
 
   @override
   Future<bool> hasAccessibilityPermission() async {
-    try {
-      return await _channel.invokeMethod('hasAccessibilityPermission');
-    } catch (e) {
-      return false;
-    }
+    return await _platformService.hasAccessibilityPermission();
   }
 
   @override
   Future<void> requestAccessibilityPermission() async {
-    try {
-      await _channel.invokeMethod('requestAccessibilityPermission');
-    } catch (e) {
-      throw Exception('Failed to request accessibility permission: $e');
-    }
+    await _platformService.requestAccessibilityPermission();
+  }
+
+  @override
+  Future<bool> hasDeviceAdminPermission() async {
+    return await _platformService.hasDeviceAdminPermission();
   }
 
   @override
   Future<void> requestDeviceAdminPermission() async {
-    try {
-      await _channel.invokeMethod('requestDeviceAdminPermission');
-    } catch (e) {
-      throw Exception('Failed to request device admin permission: $e');
-    }
+    await _platformService.requestDeviceAdminPermission();
   }
 
   @override
   Future<void> requestOverlayPermission() async {
-    try {
-      await _channel.invokeMethod('requestOverlayPermission');
-    } catch (e) {
-      throw Exception('Failed to request overlay permission: $e');
-    }
+    await _platformService.requestOverlayPermission();
   }
 
   @override
   Future<bool> hasOverlayPermission() async {
-    try {
-      return await _channel.invokeMethod('hasOverlayPermission');
-    } catch (e) {
-      return false;
-    }
+    return await _platformService.hasOverlayPermission();
   }
 
   @override
   Future<bool> requestVpnPermission() async {
-    try {
-      return await _channel.invokeMethod('requestVpnPermission');
-    } catch (e) {
-      return false;
-    }
+    return await _platformService.requestVpnPermission();
+  }
+  
+  @override
+  Future<void> requestAllPermissions() async {
+    await _platformService.requestAllPermissions();
+  }
+  
+  @override
+  Future<void> openAppSettings() async {
+    await _platformService.openAppSettings();
   }
 
   Future<void> _saveBlockedApps(List<BlockedApp> apps) async {

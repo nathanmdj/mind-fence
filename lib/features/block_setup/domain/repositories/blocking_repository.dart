@@ -16,8 +16,11 @@ abstract class BlockingRepository {
   Future<void> requestUsageStatsPermission();
   Future<bool> hasAccessibilityPermission();
   Future<void> requestAccessibilityPermission();
+  Future<bool> hasDeviceAdminPermission();
   Future<void> requestDeviceAdminPermission();
   Future<void> requestOverlayPermission();
   Future<bool> hasOverlayPermission();
   Future<bool> requestVpnPermission();
+  Future<void> requestAllPermissions();
+  Future<void> openAppSettings();
 }

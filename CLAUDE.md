@@ -84,30 +84,35 @@ Key BLoC components:
 ## Dependency Injection
 
 The app uses `get_it` with `injectable` for dependency injection:
-- Configuration: `lib/core/di/injection_container.dart`
-- Auto-generated bindings: `lib/core/di/injection_container.config.dart`
-- Initialize with `configureDependencies()` in `main.dart`
+- Configuration: `lib/core/di/injection_container.dart:1`
+- Auto-generated bindings: `lib/core/di/injection_container.config.dart:1`
+- Initialize with `configureDependencies()` in `lib/main.dart:15`
+- SharedPreferences and Dio instances are registered as singletons
 
 ## Navigation
 
 Uses `go_router` for declarative navigation:
-- Router configuration: `lib/core/widgets/app_router.dart`
-- Shell route wrapper: `lib/core/widgets/main_navigation_wrapper.dart`
+- Router configuration: `lib/core/widgets/app_router.dart:12`
+- Shell route wrapper: `lib/core/widgets/main_navigation_wrapper.dart:17`
 - Route paths: `/dashboard`, `/block-setup`, `/focus-sessions`, `/analytics`, `/settings`
+- Initial route: `/dashboard`
 
 ## Platform-Specific Features
 
 ### Android
-- **Device Admin**: Enhanced blocking capabilities
-- **Accessibility Service**: App blocking detection
+- **Device Admin**: Enhanced blocking capabilities (`android/app/src/main/res/xml/device_admin.xml`)
+- **Accessibility Service**: App blocking detection (`android/app/src/main/res/xml/accessibility_service_config.xml`)
 - **Usage Stats**: App usage monitoring
 - **VPN Service**: Website blocking
+- **MainActivity**: Kotlin-based main activity (`android/app/src/main/kotlin/com/mindfence/app/mind_fence/MainActivity.kt`)
 
 ### iOS
 - **Screen Time API**: iOS 15.0+ integration
 - **DeviceActivity**: App usage monitoring
 - **Shield Configuration**: App blocking
 - **Network Extension**: VPN-based blocking
+- **Info.plist**: iOS configuration (`ios/Runner/Info.plist`)
+- **Firebase**: Google services integration (`ios/Runner/GoogleService-Info.plist`)
 
 ## Data Models
 
@@ -132,14 +137,17 @@ Core domain entities located in `lib/shared/domain/entities/`:
 
 ## Key Dependencies
 
-- **State Management**: `flutter_bloc` (^8.1.3), `equatable` (^2.0.5)
+- **State Management**: `flutter_bloc` (^8.1.3), `bloc` (^8.1.2), `equatable` (^2.0.5)
 - **Navigation**: `go_router` (^13.2.0)
 - **Dependency Injection**: `get_it` (^7.6.7), `injectable` (^2.3.2)
-- **Database**: `sqflite` (^2.3.0)
-- **HTTP**: `dio` (^5.4.0), `retrofit` (^4.0.3)
-- **Platform Services**: `usage_stats` (^1.3.0), `app_usage` (^3.0.0)
-- **Firebase**: Core, Auth, Firestore, Analytics
-- **UI Components**: `flutter_svg`, `lottie`, `flutter_animate`
+- **Database**: `sqflite` (^2.3.0), `path` (^1.8.3)
+- **HTTP**: `dio` (^5.4.0), `retrofit` (^4.0.3), `pretty_dio_logger` (^1.3.1)
+- **JSON Serialization**: `json_annotation` (^4.8.1), `json_serializable` (^6.7.1)
+- **Platform Services**: `usage_stats` (^1.3.0), `app_usage` (^3.0.0), `flutter_vpn` (^2.0.0)
+- **Firebase**: `firebase_core` (^2.24.2), `firebase_auth` (^4.15.3), `cloud_firestore` (^4.13.6), `firebase_analytics` (^10.7.4)
+- **UI Components**: `flutter_svg` (^2.0.9), `lottie` (^2.7.0), `flutter_animate` (^4.3.0)
+- **Utilities**: `shared_preferences` (^2.2.2), `device_info_plus` (^9.1.1), `package_info_plus` (^4.2.0), `permission_handler` (^11.1.0)
+- **Testing**: `bloc_test` (^9.1.5), `mocktail` (^1.0.1), `flutter_lints` (^3.0.1)
 
 ## Development Guidelines
 
@@ -157,6 +165,9 @@ The project includes comprehensive development guidelines in `guides/` directory
 - **Shared components**: Common entities and utilities in `lib/shared/`
 - **Core utilities**: Cross-cutting concerns in `lib/core/`
 - **Assets**: Organized by type in `assets/` (images, icons, animations, fonts)
+- **Guides**: Development guidelines in `guides/` directory
+- **Platform**: Native code in `android/` and `ios/` directories
+- **Main entry**: Application entry point at `lib/main.dart`
 
 ## Security Considerations
 

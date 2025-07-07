@@ -94,6 +94,7 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i895.BlockingRepository>(() => _i647.BlockingRepositoryImpl(
           gh<_i281.MethodChannel>(),
           gh<_i460.SharedPreferences>(),
+          gh<_i178.PlatformService>(),
         ));
     gh.factory<_i1052.PreferencesService>(
         () => _i1052.PreferencesService(gh<_i294.DatabaseService>()));

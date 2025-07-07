@@ -22,11 +22,29 @@ class PlatformService {
     }
   }
 
+  Future<bool> hasAccessibilityPermission() async {
+    try {
+      final result = await _channel.invokeMethod('hasAccessibilityPermission');
+      return result as bool;
+    } on PlatformException catch (e) {
+      throw Exception('Failed to check accessibility permission: ${e.message}');
+    }
+  }
+
   Future<void> requestAccessibilityPermission() async {
     try {
       await _channel.invokeMethod('requestAccessibilityPermission');
     } on PlatformException catch (e) {
       throw Exception('Failed to request accessibility permission: ${e.message}');
+    }
+  }
+
+  Future<bool> hasDeviceAdminPermission() async {
+    try {
+      final result = await _channel.invokeMethod('hasDeviceAdminPermission');
+      return result as bool;
+    } on PlatformException catch (e) {
+      throw Exception('Failed to check device admin permission: ${e.message}');
     }
   }
 
@@ -119,6 +137,22 @@ class PlatformService {
       await _channel.invokeMethod('stopVpn');
     } on PlatformException catch (e) {
       throw Exception('Failed to stop VPN: ${e.message}');
+    }
+  }
+  
+  Future<void> requestAllPermissions() async {
+    try {
+      await _channel.invokeMethod('requestAllPermissions');
+    } on PlatformException catch (e) {
+      throw Exception('Failed to request all permissions: ${e.message}');
+    }
+  }
+  
+  Future<void> openAppSettings() async {
+    try {
+      await _channel.invokeMethod('openAppSettings');
+    } on PlatformException catch (e) {
+      throw Exception('Failed to open app settings: ${e.message}');
     }
   }
 }

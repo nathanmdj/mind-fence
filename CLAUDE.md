@@ -84,27 +84,33 @@ Key BLoC components:
 ## Dependency Injection
 
 The app uses `get_it` with `injectable` for dependency injection:
+
 - Configuration: `lib/core/di/injection_container.dart:1`
 - Auto-generated bindings: `lib/core/di/injection_container.config.dart:1`
 - Initialize with `configureDependencies()` in `lib/main.dart:15`
 - SharedPreferences and Dio instances are registered as singletons
 
+
 ## Navigation
 
 Uses `go_router` for declarative navigation:
+
 - Router configuration: `lib/core/widgets/app_router.dart:12`
 - Shell route wrapper: `lib/core/widgets/main_navigation_wrapper.dart:17`
 - Route paths: `/dashboard`, `/block-setup`, `/focus-sessions`, `/analytics`, `/settings`
 - Initial route: `/dashboard`
 
+
 ## Platform-Specific Features
 
 ### Android
+
 - **Device Admin**: Enhanced blocking capabilities (`android/app/src/main/res/xml/device_admin.xml`)
 - **Accessibility Service**: App blocking detection (`android/app/src/main/res/xml/accessibility_service_config.xml`)
 - **Usage Stats**: App usage monitoring
 - **VPN Service**: Website blocking
 - **MainActivity**: Kotlin-based main activity (`android/app/src/main/kotlin/com/mindfence/app/mind_fence/MainActivity.kt`)
+
 
 ### iOS
 - **Screen Time API**: iOS 15.0+ integration
@@ -113,6 +119,7 @@ Uses `go_router` for declarative navigation:
 - **Network Extension**: VPN-based blocking
 - **Info.plist**: iOS configuration (`ios/Runner/Info.plist`)
 - **Firebase**: Google services integration (`ios/Runner/GoogleService-Info.plist`)
+
 
 ## Data Models
 
@@ -149,6 +156,7 @@ Core domain entities located in `lib/shared/domain/entities/`:
 - **Utilities**: `shared_preferences` (^2.2.2), `device_info_plus` (^9.1.1), `package_info_plus` (^4.2.0), `permission_handler` (^11.1.0)
 - **Testing**: `bloc_test` (^9.1.5), `mocktail` (^1.0.1), `flutter_lints` (^3.0.1)
 
+
 ## Development Guidelines
 
 The project includes comprehensive development guidelines in `guides/` directory:
@@ -168,6 +176,7 @@ The project includes comprehensive development guidelines in `guides/` directory
 - **Guides**: Development guidelines in `guides/` directory
 - **Platform**: Native code in `android/` and `ios/` directories
 - **Main entry**: Application entry point at `lib/main.dart`
+
 
 ## Security Considerations
 

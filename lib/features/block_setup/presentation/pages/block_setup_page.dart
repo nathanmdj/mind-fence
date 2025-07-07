@@ -51,6 +51,20 @@ class BlockSetupPage extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Permission denied: ${state.message}')),
               );
+            } else if (state is PermissionSequentialRequesting) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Requesting ${state.currentPermission} (${state.currentStep}/${state.totalSteps})'),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            } else if (state is PermissionSequentialCompleted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('All permissions granted successfully!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             }
           },
           builder: (context, state) {
@@ -89,39 +103,67 @@ class BlockSetupPage extends StatelessWidget {
           builder: (context, state) {
             if (state is BlockSetupLoaded) {
               final needsPermissions = !state.hasUsageStatsPermission || 
-                                       !state.hasAccessibilityPermission || 
+                                       !state.hasAccessibilityPermission ||
+                                       !state.hasDeviceAdminPermission ||
                                        !state.hasOverlayPermission;
               
-              return FloatingActionButton.extended(
-                onPressed: () {
-                  if (needsPermissions) {
-                    context.read<BlockSetupBloc>().add(RequestPermissions());
-                  } else if (state.isBlocking) {
-                    context.read<BlockSetupBloc>().add(StopBlocking());
-                  } else {
-                    context.read<BlockSetupBloc>().add(StartBlocking());
-                  }
-                },
-                icon: Icon(
-                  needsPermissions
-                      ? Icons.security
-                      : state.isBlocking
-                          ? Icons.stop
-                          : Icons.play_arrow,
-                ),
-                label: Text(
-                  needsPermissions
-                      ? 'Grant Permissions'
-                      : state.isBlocking
-                          ? 'Stop Blocking'
-                          : 'Start Blocking',
-                ),
-                backgroundColor: needsPermissions
-                    ? AppColors.warning
-                    : state.isBlocking
-                        ? AppColors.error
-                        : AppColors.primary,
-              );
+              if (needsPermissions) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FloatingActionButton.extended(
+                              onPressed: () {
+                                context.read<BlockSetupBloc>().add(RequestPermissions());
+                              },
+                              icon: const Icon(Icons.security),
+                              label: const Text('Step by Step'),
+                              backgroundColor: AppColors.warning,
+                              heroTag: 'step_permissions',
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: FloatingActionButton.extended(
+                              onPressed: () {
+                                _showPermissionOptionsDialog(context);
+                              },
+                              icon: const Icon(Icons.settings),
+                              label: const Text('App Settings'),
+                              backgroundColor: AppColors.primary,
+                              heroTag: 'app_settings',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              } else {
+                return FloatingActionButton.extended(
+                  onPressed: () {
+                    if (state.isBlocking) {
+                      context.read<BlockSetupBloc>().add(StopBlocking());
+                    } else {
+                      context.read<BlockSetupBloc>().add(StartBlocking());
+                    }
+                  },
+                  icon: Icon(
+                    state.isBlocking ? Icons.stop : Icons.play_arrow,
+                  ),
+                  label: Text(
+                    state.isBlocking ? 'Stop Blocking' : 'Start Blocking',
+                  ),
+                  backgroundColor: state.isBlocking ? AppColors.error : AppColors.primary,
+                );
+              }
             }
             return const SizedBox();
           },
@@ -174,6 +216,72 @@ class BlockSetupPage extends StatelessWidget {
       ),
     );
   }
+  
+  void _showPermissionOptionsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permission Management'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Choose how you want to grant permissions:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.settings, color: AppColors.primary),
+                    title: const Text('App Settings (Recommended)'),
+                    subtitle: const Text('Opens Android\'s app info page where you can manage all permissions easily'),
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<BlockSetupBloc>().add(const RequestAllPermissions());
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.open_in_new, color: AppColors.secondary),
+              title: const Text('System Settings'),
+              subtitle: const Text('Direct access to Android settings'),
+              contentPadding: EdgeInsets.zero,
+              onTap: () {
+                Navigator.pop(context);
+                context.read<BlockSetupBloc>().add(const OpenAppSettings());
+              },
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Note: You\'ll need to return to Mind Fence after granting permissions.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PermissionStatusSection extends StatelessWidget {
@@ -199,6 +307,7 @@ class _PermissionStatusSection extends StatelessWidget {
             'Usage Stats',
             state.hasUsageStatsPermission,
             'Required for monitoring app usage',
+            'usage_stats',
           ),
           const SizedBox(height: 8),
           _buildPermissionItem(
@@ -206,6 +315,15 @@ class _PermissionStatusSection extends StatelessWidget {
             'Accessibility Service',
             state.hasAccessibilityPermission,
             'Required for detecting app launches',
+            'accessibility',
+          ),
+          const SizedBox(height: 8),
+          _buildPermissionItem(
+            context,
+            'Device Administrator',
+            state.hasDeviceAdminPermission,
+            'Required for enhanced app blocking',
+            'device_admin',
           ),
           const SizedBox(height: 8),
           _buildPermissionItem(
@@ -213,8 +331,47 @@ class _PermissionStatusSection extends StatelessWidget {
             'Overlay Permission',
             state.hasOverlayPermission,
             'Required for blocking app access',
+            'overlay',
           ),
           const SizedBox(height: 16),
+          // Add guidance message for missing permissions
+          if (!state.hasUsageStatsPermission || !state.hasAccessibilityPermission || !state.hasDeviceAdminPermission || !state.hasOverlayPermission) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: AppColors.warning, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Permissions Required',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                        Text(
+                          'Grant the missing permissions above to enable app blocking. Use the buttons below for quick access.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           Row(
             children: [
               Icon(
@@ -241,6 +398,7 @@ class _PermissionStatusSection extends StatelessWidget {
     String title,
     bool granted,
     String description,
+    String permissionType,
   ) {
     return Row(
       children: [
@@ -269,6 +427,15 @@ class _PermissionStatusSection extends StatelessWidget {
             ],
           ),
         ),
+        if (!granted)
+          IconButton(
+            onPressed: () {
+              context.read<BlockSetupBloc>().add(RequestSpecificPermission(permissionType));
+            },
+            icon: const Icon(Icons.settings, size: 20),
+            tooltip: 'Grant $title',
+            visualDensity: VisualDensity.compact,
+          ),
       ],
     );
   }

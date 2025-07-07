@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mind Fence</string>
+    <string name="accessibility_service_description">Mind Fence Accessibility Service helps block distracting apps to improve your productivity. This service is required for app blocking functionality.</string>
+    <string name="device_admin_description">Mind Fence Device Admin provides enhanced security and blocking features.</string>
+    <string name="vpn_service_description">Mind Fence VPN Service blocks distracting websites.</string>
+</resources>

@@ -163,7 +163,7 @@ class AppTheme {
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   );
   
-  static final CardTheme _cardTheme = CardTheme(
+  static final CardThemeData _cardTheme = CardThemeData(
     elevation: 2,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
@@ -171,8 +171,7 @@ class AppTheme {
     margin: const EdgeInsets.all(8),
   );
   
-  static const BottomNavigationBarTheme _bottomNavigationBarTheme = BottomNavigationBarTheme(
-    type: BottomNavigationBarType.fixed,
+  static const BottomNavigationBarThemeData _bottomNavigationBarTheme = BottomNavigationBarThemeData(
     selectedItemColor: AppColors.primary,
     unselectedItemColor: AppColors.outline,
     showSelectedLabels: true,
@@ -180,21 +179,21 @@ class AppTheme {
     elevation: 8,
   );
   
-  static const TabBarTheme _tabBarTheme = TabBarTheme(
+  static const TabBarThemeData _tabBarTheme = TabBarThemeData(
     labelColor: AppColors.primary,
     unselectedLabelColor: AppColors.outline,
     indicatorColor: AppColors.primary,
     indicatorSize: TabBarIndicatorSize.tab,
   );
   
-  static const DialogTheme _dialogTheme = DialogTheme(
+  static const DialogThemeData _dialogTheme = DialogThemeData(
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
     elevation: 8,
   );
   
-  static const SnackBarTheme _snackBarTheme = SnackBarTheme(
+  static const SnackBarThemeData _snackBarTheme = SnackBarThemeData(
     behavior: SnackBarBehavior.floating,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(8)),

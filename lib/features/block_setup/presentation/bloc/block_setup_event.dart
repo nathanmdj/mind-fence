@@ -24,7 +24,20 @@ class ToggleAppBlocking extends BlockSetupEvent {
 
 class RequestPermissions extends BlockSetupEvent {}
 
+class RequestNextPermission extends BlockSetupEvent {
+  const RequestNextPermission();
+}
+
 class CheckPermissions extends BlockSetupEvent {}
+
+class RequestSpecificPermission extends BlockSetupEvent {
+  final String permissionType;
+
+  const RequestSpecificPermission(this.permissionType);
+
+  @override
+  List<Object> get props => [permissionType];
+}
 
 class StartBlocking extends BlockSetupEvent {}
 
@@ -37,4 +50,12 @@ class FilterApps extends BlockSetupEvent {
 
   @override
   List<Object> get props => [query];
+}
+
+class RequestAllPermissions extends BlockSetupEvent {
+  const RequestAllPermissions();
+}
+
+class OpenAppSettings extends BlockSetupEvent {
+  const OpenAppSettings();
 }

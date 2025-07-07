@@ -12,4 +12,7 @@ abstract class BlockedAppsRepository {
   Future<void> blockApp(String packageName);
   Future<void> unblockApp(String packageName);
   Future<void> syncBlockedApps();
+  Future<void> startBlocking(List<String> blockedApps);
+  Future<void> stopBlocking();
+  Future<bool> isBlocking();
 }

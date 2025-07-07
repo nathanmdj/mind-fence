@@ -9,32 +9,28 @@ final getIt = GetIt.instance;
 
 @InjectableInit()
 Future<void> configureDependencies() async {
-  // Register SharedPreferences
-  final sharedPreferences = await SharedPreferences.getInstance();
-  getIt.registerSingleton<SharedPreferences>(sharedPreferences);
-  
-  // Register Dio
-  final dio = Dio();
-  dio.options = BaseOptions(
-    baseUrl: 'https://api.mindfence.com/', // Replace with actual API URL
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  );
-  getIt.registerSingleton<Dio>(dio);
-  
   // Initialize injectable dependencies
-  getIt.init();
+  await getIt.init();
 }
 
 // Register modules
 @module
 abstract class RegisterModule {
   @singleton
-  SharedPreferences get sharedPreferences => getIt<SharedPreferences>();
+  @preResolve
+  Future<SharedPreferences> get sharedPreferences => SharedPreferences.getInstance();
   
   @singleton
-  Dio get dio => getIt<Dio>();
+  Dio get dio {
+    final dio = Dio();
+    dio.options = BaseOptions(
+      baseUrl: 'https://api.mindfence.com/', // Replace with actual API URL
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+    return dio;
+  }
 }

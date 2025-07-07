@@ -18,6 +18,7 @@ class BlockSetupLoaded extends BlockSetupState {
   final List<BlockedApp> filteredApps;
   final bool hasUsageStatsPermission;
   final bool hasAccessibilityPermission;
+  final bool hasDeviceAdminPermission;
   final bool hasOverlayPermission;
   final bool isBlocking;
   final String searchQuery;
@@ -28,6 +29,7 @@ class BlockSetupLoaded extends BlockSetupState {
     required this.filteredApps,
     required this.hasUsageStatsPermission,
     required this.hasAccessibilityPermission,
+    required this.hasDeviceAdminPermission,
     required this.hasOverlayPermission,
     required this.isBlocking,
     this.searchQuery = '',
@@ -39,6 +41,7 @@ class BlockSetupLoaded extends BlockSetupState {
     List<BlockedApp>? filteredApps,
     bool? hasUsageStatsPermission,
     bool? hasAccessibilityPermission,
+    bool? hasDeviceAdminPermission,
     bool? hasOverlayPermission,
     bool? isBlocking,
     String? searchQuery,
@@ -49,6 +52,7 @@ class BlockSetupLoaded extends BlockSetupState {
       filteredApps: filteredApps ?? this.filteredApps,
       hasUsageStatsPermission: hasUsageStatsPermission ?? this.hasUsageStatsPermission,
       hasAccessibilityPermission: hasAccessibilityPermission ?? this.hasAccessibilityPermission,
+      hasDeviceAdminPermission: hasDeviceAdminPermission ?? this.hasDeviceAdminPermission,
       hasOverlayPermission: hasOverlayPermission ?? this.hasOverlayPermission,
       isBlocking: isBlocking ?? this.isBlocking,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -62,6 +66,7 @@ class BlockSetupLoaded extends BlockSetupState {
     filteredApps,
     hasUsageStatsPermission,
     hasAccessibilityPermission,
+    hasDeviceAdminPermission,
     hasOverlayPermission,
     isBlocking,
     searchQuery,
@@ -89,3 +94,20 @@ class PermissionDenied extends BlockSetupState {
   @override
   List<Object> get props => [message];
 }
+
+class PermissionSequentialRequesting extends BlockSetupState {
+  final String currentPermission;
+  final int currentStep;
+  final int totalSteps;
+
+  const PermissionSequentialRequesting({
+    required this.currentPermission,
+    required this.currentStep,
+    required this.totalSteps,
+  });
+
+  @override
+  List<Object> get props => [currentPermission, currentStep, totalSteps];
+}
+
+class PermissionSequentialCompleted extends BlockSetupState {}

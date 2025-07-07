@@ -25,10 +25,14 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
     on<LoadBlockedApps>(_onLoadBlockedApps);
     on<ToggleAppBlocking>(_onToggleAppBlocking);
     on<RequestPermissions>(_onRequestPermissions);
+    on<RequestNextPermission>(_onRequestNextPermission);
+    on<RequestSpecificPermission>(_onRequestSpecificPermission);
     on<CheckPermissions>(_onCheckPermissions);
     on<StartBlocking>(_onStartBlocking);
     on<StopBlocking>(_onStopBlocking);
     on<FilterApps>(_onFilterApps);
+    on<RequestAllPermissions>(_onRequestAllPermissions);
+    on<OpenAppSettings>(_onOpenAppSettings);
   }
 
   Future<void> _onLoadInstalledApps(
@@ -42,6 +46,7 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
       final blockedApps = await _repository.getBlockedApps();
       final hasUsageStats = await _requestPermissions.hasUsageStatsPermission();
       final hasAccessibility = await _requestPermissions.hasAccessibilityPermission();
+      final hasDeviceAdmin = await _requestPermissions.hasDeviceAdminPermission();
       final hasOverlay = await _requestPermissions.hasOverlayPermission();
       final isBlocking = await _repository.isBlocking();
       
@@ -57,6 +62,7 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
         filteredApps: mergedApps,
         hasUsageStatsPermission: hasUsageStats,
         hasAccessibilityPermission: hasAccessibility,
+        hasDeviceAdminPermission: hasDeviceAdmin,
         hasOverlayPermission: hasOverlay,
         isBlocking: isBlocking,
       ));
@@ -120,19 +126,82 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
     RequestPermissions event,
     Emitter<BlockSetupState> emit,
   ) async {
-    try {
-      emit(PermissionRequesting());
-      
-      await _requestPermissions.requestUsageStatsPermission();
-      await _requestPermissions.requestAccessibilityPermission();
-      await _requestPermissions.requestOverlayPermission();
-      
-      emit(PermissionGranted());
-      
-      // Reload to check permissions
+    // Start sequential permission flow
+    add(const RequestNextPermission());
+  }
+
+  Future<void> _onRequestNextPermission(
+    RequestNextPermission event,
+    Emitter<BlockSetupState> emit,
+  ) async {
+    if (state is! BlockSetupLoaded) return;
+    
+    final currentState = state as BlockSetupLoaded;
+    
+    // Define permission order and check what's missing
+    final permissions = [
+      {'type': 'usage_stats', 'name': 'Usage Stats', 'granted': currentState.hasUsageStatsPermission},
+      {'type': 'accessibility', 'name': 'Accessibility Service', 'granted': currentState.hasAccessibilityPermission},
+      {'type': 'device_admin', 'name': 'Device Administrator', 'granted': currentState.hasDeviceAdminPermission},
+      {'type': 'overlay', 'name': 'Display Over Other Apps', 'granted': currentState.hasOverlayPermission},
+    ];
+    
+    // Find the first permission that's not granted
+    final missingPermission = permissions.firstWhere(
+      (permission) => !(permission['granted'] as bool),
+      orElse: () => {},
+    );
+    
+    if (missingPermission.isEmpty) {
+      // All permissions are granted
+      emit(PermissionSequentialCompleted());
       add(CheckPermissions());
+      return;
+    }
+    
+    final currentIndex = permissions.indexOf(missingPermission);
+    emit(PermissionSequentialRequesting(
+      currentPermission: missingPermission['name'] as String,
+      currentStep: currentIndex + 1,
+      totalSteps: permissions.length,
+    ));
+    
+    // Request the specific permission
+    add(RequestSpecificPermission(missingPermission['type'] as String));
+  }
+
+  Future<void> _onRequestSpecificPermission(
+    RequestSpecificPermission event,
+    Emitter<BlockSetupState> emit,
+  ) async {
+    try {
+      switch (event.permissionType) {
+        case 'usage_stats':
+          await _requestPermissions.requestUsageStatsPermission();
+          break;
+        case 'accessibility':
+          await _requestPermissions.requestAccessibilityPermission();
+          break;
+        case 'device_admin':
+          await _requestPermissions.requestDeviceAdminPermission();
+          break;
+        case 'overlay':
+          await _requestPermissions.requestOverlayPermission();
+          break;
+      }
+      
+      // Wait a moment for the user to potentially grant the permission
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Check permissions and continue with the next one
+      add(CheckPermissions());
+      
+      // After a short delay, request the next permission if needed
+      await Future.delayed(const Duration(milliseconds: 500));
+      add(const RequestNextPermission());
+      
     } catch (e) {
-      emit(PermissionDenied(e.toString()));
+      emit(PermissionDenied('Failed to request ${event.permissionType}: $e'));
     }
   }
 
@@ -145,11 +214,13 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
         final currentState = state as BlockSetupLoaded;
         final hasUsageStats = await _requestPermissions.hasUsageStatsPermission();
         final hasAccessibility = await _requestPermissions.hasAccessibilityPermission();
+        final hasDeviceAdmin = await _requestPermissions.hasDeviceAdminPermission();
         final hasOverlay = await _requestPermissions.hasOverlayPermission();
         
         emit(currentState.copyWith(
           hasUsageStatsPermission: hasUsageStats,
           hasAccessibilityPermission: hasAccessibility,
+          hasDeviceAdminPermission: hasDeviceAdmin,
           hasOverlayPermission: hasOverlay,
         ));
       }
@@ -215,5 +286,36 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
       return app.name.toLowerCase().contains(query.toLowerCase()) ||
              app.packageName.toLowerCase().contains(query.toLowerCase());
     }).toList();
+  }
+  
+  Future<void> _onRequestAllPermissions(
+    RequestAllPermissions event,
+    Emitter<BlockSetupState> emit,
+  ) async {
+    try {
+      emit(PermissionRequesting());
+      await _requestPermissions.requestAllPermissions();
+      
+      // Wait a moment then check permissions
+      await Future.delayed(const Duration(seconds: 1));
+      add(CheckPermissions());
+    } catch (e) {
+      emit(PermissionDenied('Failed to request all permissions: $e'));
+    }
+  }
+  
+  Future<void> _onOpenAppSettings(
+    OpenAppSettings event,
+    Emitter<BlockSetupState> emit,
+  ) async {
+    try {
+      await _requestPermissions.openAppSettings();
+      
+      // Wait a moment then check permissions
+      await Future.delayed(const Duration(seconds: 1));
+      add(CheckPermissions());
+    } catch (e) {
+      emit(BlockSetupError('Failed to open app settings: $e'));
+    }
   }
 }

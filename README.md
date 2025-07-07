@@ -1,15 +1,17 @@
 # Mind Fence - Social Media Blocking App
 
-A comprehensive Flutter application designed to help users increase productivity by blocking social media apps and managing digital distractions.
+A comprehensive Flutter application designed to help users increase productivity by blocking social media apps and managing digital distractions. Mind Fence provides system-level blocking capabilities with native integrations for both Android and iOS platforms.
 
 ## Features
 
-- **Smart App Blocking**: Block specific social media apps with system-level integration
-- **Website Blocking**: Comprehensive website blocking using VPN technology
+- **Smart App Blocking**: Block specific social media apps with system-level integration through native services
+- **Website Blocking**: Comprehensive website blocking using VPN technology and network extensions
 - **Focus Sessions**: Timed productivity sessions with complete social media lockdown
-- **Usage Analytics**: Track screen time, app usage, and productivity gains
-- **Dashboard**: Real-time blocking status and productivity metrics
+- **Usage Analytics**: Track screen time, app usage, and productivity gains with detailed insights
+- **Dashboard**: Real-time blocking status and productivity metrics with interactive widgets
 - **Cross-Platform**: Native iOS and Android implementations with platform-specific APIs
+- **Advanced Permissions**: Comprehensive permission management for device admin, accessibility, and VPN services
+- **Background Processing**: Continuous monitoring and blocking even when the app is closed
 
 ## Getting Started
 
@@ -35,12 +37,13 @@ A comprehensive Flutter application designed to help users increase productivity
 
 3. Generate code:
    ```bash
-   flutter packages pub run build_runner build
+   dart run build_runner build
    ```
 
-4. Configure Firebase:
+4. Configure Firebase (Optional):
    - Add your `google-services.json` to `android/app/`
    - Add your `GoogleService-Info.plist` to `ios/Runner/`
+   - Note: Firebase services are currently disabled in the pubspec.yaml but configuration files are prepared
 
 5. Run the app:
    ```bash
@@ -61,14 +64,19 @@ The app follows Clean Architecture principles with:
 - **Device Admin**: Enhanced blocking capabilities with device administration
 - **Accessibility Service**: Real-time app detection and blocking
 - **Usage Stats Manager**: App usage monitoring and analytics
-- **VPN Service**: Website blocking through VPN technology
-- **Kotlin Integration**: Native Android code in Kotlin
+- **VPN Service**: Website blocking through system VPN integration
+- **Kotlin Integration**: Native Android code in Kotlin with method channels
+- **Native Services**: DeviceAdminReceiver, AccessibilityService, VpnService, BlockingService
+- **Comprehensive Permissions**: Usage stats, device admin, accessibility, system alert window, and VPN permissions
 
 ### iOS
-- **Screen Time API**: iOS 15.0+ integration for system-level blocking
-- **DeviceActivity**: Real-time app usage monitoring
+- **Screen Time API**: iOS 15.0+ integration with Family Controls framework
+- **DeviceActivity**: Real-time app usage monitoring and intervention
 - **Shield Configuration**: Dynamic app blocking interface
-- **Network Extension**: VPN functionality for website blocking
+- **Network Extension**: VPN functionality for website blocking (packet-tunnel-provider, app-proxy-provider)
+- **Family Controls**: System-level app blocking capabilities
+- **Managed Settings**: Configuration management for blocking rules
+- **Background Processing**: Support for background app refresh and processing
 
 ## Development
 
@@ -99,9 +107,15 @@ flutter analyze
 # Format code
 flutter format .
 
+# Generate code (dependency injection, serialization)
+dart run build_runner build
+
 # Build for release
 flutter build apk  # Android
 flutter build ios  # iOS
+
+# Clean build files
+flutter clean
 ```
 
 ## Contributing
@@ -114,6 +128,23 @@ Key guidelines:
 - Maintain 100% type safety
 - Include comprehensive tests
 - Follow security best practices
+- Test platform-specific features on both Android and iOS
+- Ensure proper permission handling for system-level integrations
+
+## Technical Notes
+
+### Current Implementation Status
+- **Core Flutter App**: Fully implemented with clean architecture
+- **Platform Services**: Native Android and iOS implementations ready
+- **Firebase Integration**: Prepared but currently disabled in pubspec.yaml
+- **Usage Monitoring**: Native implementations through method channels
+- **VPN Services**: Native implementations for website blocking
+
+### Dependencies Status
+Some advanced platform services are temporarily disabled in pubspec.yaml but have native implementations:
+- Firebase services (prepared for future use)
+- Usage stats packages (replaced with native implementations)
+- VPN packages (replaced with native implementations)
 
 ## License
 

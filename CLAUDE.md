@@ -14,7 +14,7 @@ Mind Fence is a Flutter-based social media blocking application designed to help
 flutter pub get
 
 # Run code generation for dependency injection and serialization
-flutter packages pub run build_runner build
+dart run build_runner build
 
 # Run the app in development mode
 flutter run
@@ -46,10 +46,14 @@ flutter clean
 
 ### Code Generation Commands
 ```bash
-# Generate dependency injection code
-flutter packages pub run build_runner build --delete-conflicting-outputs
+# Generate dependency injection code (recommended)
+dart run build_runner build --delete-conflicting-outputs
 
 # Watch for changes and auto-generate
+dart run build_runner watch
+
+# Legacy commands (still supported)
+flutter packages pub run build_runner build --delete-conflicting-outputs
 flutter packages pub run build_runner watch
 ```
 
@@ -107,18 +111,23 @@ Uses `go_router` for declarative navigation:
 
 - **Device Admin**: Enhanced blocking capabilities (`android/app/src/main/res/xml/device_admin.xml`)
 - **Accessibility Service**: App blocking detection (`android/app/src/main/res/xml/accessibility_service_config.xml`)
-- **Usage Stats**: App usage monitoring
-- **VPN Service**: Website blocking
-- **MainActivity**: Kotlin-based main activity (`android/app/src/main/kotlin/com/mindfence/app/mind_fence/MainActivity.kt`)
-
+- **Usage Stats**: App usage monitoring and permission management
+- **VPN Service**: Website blocking through system VPN integration
+- **MainActivity**: Kotlin-based main activity with native method channels (`android/app/src/main/kotlin/com/mindfence/app/mind_fence/MainActivity.kt`)
+- **Native Services**: DeviceAdminReceiver, AccessibilityService, VpnService, BlockingService
+- **Permissions**: Comprehensive permission set including usage stats, device admin, accessibility, and VPN permissions
+- **Method Channels**: Direct integration for app listing, permission management, and system-level blocking
 
 ### iOS
-- **Screen Time API**: iOS 15.0+ integration
-- **DeviceActivity**: App usage monitoring
-- **Shield Configuration**: App blocking
-- **Network Extension**: VPN-based blocking
-- **Info.plist**: iOS configuration (`ios/Runner/Info.plist`)
+- **Screen Time API**: iOS 15.0+ integration with Family Controls framework
+- **DeviceActivity**: Real-time app usage monitoring and intervention
+- **Shield Configuration**: Dynamic app blocking interface
+- **Network Extension**: VPN functionality for website blocking (packet-tunnel-provider, app-proxy-provider)
+- **Family Controls**: System-level app blocking capabilities
+- **Managed Settings**: Configuration management for blocking rules
+- **Info.plist**: iOS configuration with comprehensive entitlements (`ios/Runner/Info.plist`)
 - **Firebase**: Google services integration (`ios/Runner/GoogleService-Info.plist`)
+- **Background Processing**: Support for background app refresh and processing
 
 
 ## Data Models
@@ -150,11 +159,17 @@ Core domain entities located in `lib/shared/domain/entities/`:
 - **Database**: `sqflite` (^2.3.0), `path` (^1.8.3)
 - **HTTP**: `dio` (^5.4.0), `retrofit` (^4.0.3), `pretty_dio_logger` (^1.3.1)
 - **JSON Serialization**: `json_annotation` (^4.8.1), `json_serializable` (^6.7.1)
-- **Platform Services**: `usage_stats` (^1.3.0), `app_usage` (^3.0.0), `flutter_vpn` (^2.0.0)
-- **Firebase**: `firebase_core` (^2.24.2), `firebase_auth` (^4.15.3), `cloud_firestore` (^4.13.6), `firebase_analytics` (^10.7.4)
 - **UI Components**: `flutter_svg` (^2.0.9), `lottie` (^2.7.0), `flutter_animate` (^4.3.0)
-- **Utilities**: `shared_preferences` (^2.2.2), `device_info_plus` (^9.1.1), `package_info_plus` (^4.2.0), `permission_handler` (^11.1.0)
-- **Testing**: `bloc_test` (^9.1.5), `mocktail` (^1.0.1), `flutter_lints` (^3.0.1)
+- **Utilities**: `shared_preferences` (^2.2.2), `device_info_plus` (^9.1.1), `package_info_plus` (^4.2.0), `permission_handler` (^11.1.0), `intl` (^0.19.0)
+- **Testing**: `bloc_test` (^9.1.5), `mocktail` (^1.0.1), `flutter_lints` (^3.0.1), `integration_test` (SDK)
+
+### Platform Services (Currently Disabled)
+The following platform-specific dependencies are temporarily disabled in the current implementation:
+- **Firebase**: `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_analytics`
+- **Usage Monitoring**: `usage_stats`, `app_usage`
+- **VPN Services**: `flutter_vpn`
+
+Note: These services have comprehensive native implementations in Android (Kotlin) and iOS (Swift) through method channels.
 
 
 ## Development Guidelines
@@ -184,3 +199,42 @@ The project includes comprehensive development guidelines in `guides/` directory
 - VPN and accessibility services need security review
 - User data should be encrypted and processed locally where possible
 - Firebase integration for cloud sync with privacy protection
+- Native method channels require input validation and security checks
+- Device admin permissions need user consent and proper revocation handling
+- Accessibility services must comply with Android's accessibility guidelines
+- iOS Family Controls require proper entitlements and user authorization
+
+## Current Implementation Status
+
+### Completed
+- **Core Flutter Architecture**: Clean architecture with feature-based structure
+- **State Management**: BLoC pattern implementation across all features
+- **Navigation**: Go Router with shell route navigation
+- **Dependency Injection**: Full get_it and injectable setup
+- **Native Integration**: Android Kotlin and iOS Swift platform channels
+- **Permission Management**: Comprehensive permission handling for both platforms
+- **Theme System**: Material Design 3 with dark mode support
+
+### In Progress
+- **Platform Services**: Native implementations for blocking services
+- **UI Implementation**: Feature-specific widgets and pages
+- **Database Integration**: SQLite setup for local data storage
+- **Testing**: Unit, widget, and integration test structure
+
+### Prepared for Future
+- **Firebase Services**: Configuration ready, dependencies commented out
+- **Advanced Analytics**: Usage tracking and productivity metrics
+- **Cloud Sync**: User data synchronization across devices
+
+## Troubleshooting
+
+### Common Issues
+1. **Build Runner Errors**: Use `dart run build_runner clean` followed by `dart run build_runner build`
+2. **Platform Permissions**: Ensure proper AndroidManifest.xml and Info.plist configuration
+3. **Method Channel Issues**: Verify native implementations in MainActivity.kt and iOS equivalents
+4. **Firebase Integration**: Uncomment dependencies in pubspec.yaml when ready to enable
+
+### Platform-Specific Issues
+- **Android**: Ensure Google Services JSON is configured correctly
+- **iOS**: Verify entitlements and capabilities are properly set
+- **VPN Services**: Test on physical devices as emulators may not support VPN functionality

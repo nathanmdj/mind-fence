@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 
 import 'injection_container.config.dart';
 
@@ -33,4 +34,8 @@ abstract class RegisterModule {
     );
     return dio;
   }
+
+  @singleton
+  MethodChannel get deviceControlChannel => const MethodChannel('com.mindfence.app/device_control');
+
 }

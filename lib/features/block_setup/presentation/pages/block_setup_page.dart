@@ -3,11 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/permission_setup_flow_widget.dart';
+import '../../../../core/widgets/permission_status_indicator.dart';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/services/permission_status_service.dart';
 import '../../../../core/di/injection_container.dart';
 import '../bloc/block_setup_bloc.dart';
 import '../bloc/block_setup_event.dart';
 import '../bloc/block_setup_state.dart';
 import '../../../../shared/domain/entities/blocked_app.dart';
+import '../widgets/searchable_apps_modal.dart';
 
 class BlockSetupPage extends StatelessWidget {
   const BlockSetupPage({super.key});
@@ -69,7 +74,7 @@ class BlockSetupPage extends StatelessWidget {
           },
           builder: (context, state) {
             if (state is BlockSetupLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return _buildSkeletonScreen();
             }
             
             if (state is BlockSetupLoaded) {
@@ -172,6 +177,147 @@ class BlockSetupPage extends StatelessWidget {
     );
   }
 
+  Widget _buildSkeletonScreen() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Permission Status Skeleton
+          _buildPermissionStatusSkeleton(),
+          const SizedBox(height: 24),
+          
+          // Blocked Apps Skeleton
+          _buildBlockedAppsSkeleton(),
+          const SizedBox(height: 24),
+          
+          // Available Apps Skeleton
+          _buildAvailableAppsSkeleton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionStatusSkeleton() {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SkeletonBox(width: 150, height: 24),
+          const SizedBox(height: 8),
+          _SkeletonBox(width: double.infinity, height: 4),
+          const SizedBox(height: 16),
+          
+          // Permission groups skeleton
+          for (int i = 0; i < 2; i++) ...[
+            Row(
+              children: [
+                _SkeletonBox(width: 16, height: 16),
+                const SizedBox(width: 6),
+                _SkeletonBox(width: 120, height: 16),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (int j = 0; j < 2; j++)
+                  _SkeletonBox(width: 80, height: 32, borderRadius: 16),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          
+          Row(
+            children: [
+              _SkeletonBox(width: 24, height: 24),
+              const SizedBox(width: 8),
+              _SkeletonBox(width: 100, height: 16),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlockedAppsSkeleton() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _SkeletonBox(width: 140, height: 24),
+            const Spacer(),
+            _SkeletonBox(width: 60, height: 20, borderRadius: 12),
+          ],
+        ),
+        const SizedBox(height: 16),
+        AppCard(
+          child: Column(
+            children: [
+              for (int i = 0; i < 3; i++) ...[
+                _buildAppItemSkeleton(),
+                if (i < 2) const Divider(),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAvailableAppsSkeleton() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _SkeletonBox(width: 120, height: 24),
+            const Spacer(),
+            _SkeletonBox(width: 60, height: 16),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _SkeletonBox(width: 200, height: 16),
+        const SizedBox(height: 16),
+        AppCard(
+          child: Column(
+            children: [
+              for (int i = 0; i < 5; i++) ...[
+                _buildAppItemSkeleton(),
+                if (i < 4) const Divider(),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppItemSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          _SkeletonBox(width: 40, height: 40, borderRadius: 8),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SkeletonBox(width: double.infinity, height: 16),
+                const SizedBox(height: 4),
+                _SkeletonBox(width: 150, height: 12),
+              ],
+            ),
+          ),
+          _SkeletonBox(width: 50, height: 30, borderRadius: 15),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLoadedContent(BuildContext context, BlockSetupLoaded state) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -179,15 +325,15 @@ class BlockSetupPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Permission Status
-          _PermissionStatusSection(state),
+          _EnhancedPermissionStatusSection(state, onShowSetupGuide: () => _showEnhancedPermissionSetup(context)),
           const SizedBox(height: 24),
           
           // Currently Blocked Apps
           _BlockedAppsSection(state.blockedApps),
           const SizedBox(height: 24),
           
-          // Available Apps Section
-          _AvailableAppsSection(state.filteredApps),
+          // Available Apps Section with pagination support
+          _EnhancedAvailableAppsSection(state),
         ],
       ),
     );
@@ -240,13 +386,13 @@ class BlockSetupPage extends StatelessWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.settings, color: AppColors.primary),
-                    title: const Text('App Settings (Recommended)'),
-                    subtitle: const Text('Opens Android\'s app info page where you can manage all permissions easily'),
+                    leading: const Icon(Icons.auto_awesome, color: AppColors.primary),
+                    title: const Text('Enhanced Setup (Recommended)'),
+                    subtitle: const Text('Step-by-step guide with detailed instructions'),
                     contentPadding: EdgeInsets.zero,
                     onTap: () {
                       Navigator.pop(context);
-                      context.read<BlockSetupBloc>().add(const RequestAllPermissions());
+                      _showEnhancedPermissionSetup(context);
                     },
                   ),
                 ],
@@ -254,9 +400,20 @@ class BlockSetupPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ListTile(
+              leading: const Icon(Icons.settings, color: AppColors.secondary),
+              title: const Text('Quick Settings'),
+              subtitle: const Text('Direct access to app settings'),
+              contentPadding: EdgeInsets.zero,
+              onTap: () {
+                Navigator.pop(context);
+                context.read<BlockSetupBloc>().add(const RequestAllPermissions());
+              },
+            ),
+            const SizedBox(height: 12),
+            ListTile(
               leading: const Icon(Icons.open_in_new, color: AppColors.secondary),
               title: const Text('System Settings'),
-              subtitle: const Text('Direct access to Android settings'),
+              subtitle: const Text('Manual permission management'),
               contentPadding: EdgeInsets.zero,
               onTap: () {
                 Navigator.pop(context);
@@ -282,96 +439,114 @@ class BlockSetupPage extends StatelessWidget {
       ),
     );
   }
+
+  void _showEnhancedPermissionSetup(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PermissionSetupFlowWidget(
+          onCompleted: () {
+            Navigator.pop(context);
+            // Refresh permission status
+            context.read<BlockSetupBloc>().add(CheckPermissions());
+          },
+          onCancelled: () {
+            Navigator.pop(context);
+          },
+          showProgress: true,
+          allowSkipOptional: true,
+          permissionStatusService: getIt<PermissionStatusService>(),
+          permissionService: getIt<PermissionService>(),
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+  }
 }
 
-class _PermissionStatusSection extends StatelessWidget {
+class _EnhancedPermissionStatusSection extends StatelessWidget {
   final BlockSetupLoaded state;
+  final VoidCallback? onShowSetupGuide;
   
-  const _PermissionStatusSection(this.state);
+  const _EnhancedPermissionStatusSection(this.state, {this.onShowSetupGuide});
 
   @override
   Widget build(BuildContext context) {
+    final criticalPermissions = [
+      PermissionType.usageStats,
+      PermissionType.accessibility,
+    ];
+    
+    final highPriorityPermissions = [
+      PermissionType.deviceAdmin,
+      PermissionType.overlay,
+    ];
+    
+    final grantedCritical = criticalPermissions.where((type) => 
+      _isPermissionGranted(type)).length;
+    final grantedHigh = highPriorityPermissions.where((type) => 
+      _isPermissionGranted(type)).length;
+    
+    final totalGranted = grantedCritical + grantedHigh;
+    final totalPermissions = criticalPermissions.length + highPriorityPermissions.length;
+    final progress = totalPermissions > 0 ? totalGranted / totalPermissions : 0.0;
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Permission Status',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              Text(
+                'Permission Status',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$totalGranted/$totalPermissions',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: progress == 1.0 ? AppColors.success : AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              progress == 1.0 ? AppColors.success : AppColors.warning,
             ),
           ),
           const SizedBox(height: 16),
-          _buildPermissionItem(
+          
+          // Critical permissions
+          _buildPermissionGroup(
             context,
-            'Usage Stats',
-            state.hasUsageStatsPermission,
-            'Required for monitoring app usage',
-            'usage_stats',
+            'Critical Permissions',
+            'Required for core functionality',
+            Icons.warning,
+            AppColors.error,
+            criticalPermissions,
           ),
-          const SizedBox(height: 8),
-          _buildPermissionItem(
+          
+          const SizedBox(height: 12),
+          
+          // High priority permissions
+          _buildPermissionGroup(
             context,
-            'Accessibility Service',
-            state.hasAccessibilityPermission,
-            'Required for detecting app launches',
-            'accessibility',
+            'Enhanced Features',
+            'Recommended for better blocking',
+            Icons.star,
+            AppColors.primary,
+            highPriorityPermissions,
           ),
-          const SizedBox(height: 8),
-          _buildPermissionItem(
-            context,
-            'Device Administrator',
-            state.hasDeviceAdminPermission,
-            'Required for enhanced app blocking',
-            'device_admin',
-          ),
-          const SizedBox(height: 8),
-          _buildPermissionItem(
-            context,
-            'Overlay Permission',
-            state.hasOverlayPermission,
-            'Required for blocking app access',
-            'overlay',
-          ),
+          
           const SizedBox(height: 16),
-          // Add guidance message for missing permissions
-          if (!state.hasUsageStatsPermission || !state.hasAccessibilityPermission || !state.hasDeviceAdminPermission || !state.hasOverlayPermission) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info, color: AppColors.warning, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Permissions Required',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                        Text(
-                          'Grant the missing permissions above to enable app blocking. Use the buttons below for quick access.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+          
+          // Blocking status
           Row(
             children: [
               Icon(
@@ -386,6 +561,17 @@ class _PermissionStatusSection extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const Spacer(),
+              if (progress < 1.0)
+                TextButton.icon(
+                  onPressed: onShowSetupGuide,
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('Setup Guide'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
             ],
           ),
         ],
@@ -393,51 +579,107 @@ class _PermissionStatusSection extends StatelessWidget {
     );
   }
 
-  Widget _buildPermissionItem(
+  Widget _buildPermissionGroup(
     BuildContext context,
     String title,
-    bool granted,
-    String description,
-    String permissionType,
+    String subtitle,
+    IconData icon,
+    Color iconColor,
+    List<PermissionType> permissions,
   ) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          granted ? Icons.check_circle : Icons.error,
-          color: granted ? AppColors.success : AppColors.error,
-          size: 20,
+        Row(
+          children: [
+            Icon(icon, color: iconColor, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                description,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-            ],
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColors.onSurfaceVariant,
           ),
         ),
-        if (!granted)
-          IconButton(
-            onPressed: () {
-              context.read<BlockSetupBloc>().add(RequestSpecificPermission(permissionType));
-            },
-            icon: const Icon(Icons.settings, size: 20),
-            tooltip: 'Grant $title',
-            visualDensity: VisualDensity.compact,
-          ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: permissions.map((type) => _buildPermissionChip(
+            context, 
+            type, 
+            _isPermissionGranted(type),
+          )).toList(),
+        ),
       ],
     );
+  }
+
+  Widget _buildPermissionChip(
+    BuildContext context,
+    PermissionType type,
+    bool isGranted,
+  ) {
+    final name = _getPermissionName(type);
+    
+    return Chip(
+      avatar: Icon(
+        isGranted ? Icons.check_circle : Icons.error,
+        color: isGranted ? AppColors.success : AppColors.error,
+        size: 16,
+      ),
+      label: Text(
+        name,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      backgroundColor: isGranted 
+        ? AppColors.success.withOpacity(0.1)
+        : AppColors.error.withOpacity(0.1),
+      side: BorderSide(
+        color: isGranted ? AppColors.success : AppColors.error,
+        width: 0.5,
+      ),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+
+  bool _isPermissionGranted(PermissionType type) {
+    switch (type) {
+      case PermissionType.usageStats:
+        return state.hasUsageStatsPermission;
+      case PermissionType.accessibility:
+        return state.hasAccessibilityPermission;
+      case PermissionType.deviceAdmin:
+        return state.hasDeviceAdminPermission;
+      case PermissionType.overlay:
+        return state.hasOverlayPermission;
+      default:
+        return false;
+    }
+  }
+
+  String _getPermissionName(PermissionType type) {
+    switch (type) {
+      case PermissionType.usageStats:
+        return 'Usage Stats';
+      case PermissionType.accessibility:
+        return 'Accessibility';
+      case PermissionType.deviceAdmin:
+        return 'Device Admin';
+      case PermissionType.overlay:
+        return 'Overlay';
+      default:
+        return type.toString();
+    }
   }
 }
 
@@ -640,132 +882,221 @@ class _BlockedAppsSection extends StatelessWidget {
   }
 }
 
-class _AvailableAppsSection extends StatelessWidget {
-  final List<BlockedApp> availableApps;
+class _EnhancedAvailableAppsSection extends StatelessWidget {
+  final BlockSetupLoaded state;
   
-  const _AvailableAppsSection(this.availableApps);
+  const _EnhancedAvailableAppsSection(this.state);
 
   @override
   Widget build(BuildContext context) {
-    final nonBlockedApps = availableApps.where((app) => !app.isBlocked).toList();
+    final nonBlockedApps = state.filteredApps.where((app) => !app.isBlocked).toList();
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Available Apps',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          children: [
+            Text(
+              'Available Apps',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            if (state.searchQuery.isNotEmpty)
+              Chip(
+                label: Text('"${state.searchQuery}"'),
+                deleteIcon: const Icon(Icons.close, size: 16),
+                onDeleted: () {
+                  context.read<BlockSetupBloc>().add(const FilterApps(''));
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
         ),
         const SizedBox(height: 8),
-        Text(
-          'Select apps to block',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppColors.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (nonBlockedApps.isEmpty)
-          AppCard(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 48,
-                      color: AppColors.success,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'All apps are blocked',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.success,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'You have maximum protection enabled',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _getSubtitleText(state),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.onSurfaceVariant,
                 ),
               ),
             ),
-          )
+            if (state.filteredApps.isNotEmpty)
+              Text(
+                'Page ${state.currentPage}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        if (nonBlockedApps.isEmpty)
+          _buildEmptyState(context)
         else
-          AppCard(
-            child: Column(
-              children: [
-                ...nonBlockedApps.take(5).map((app) => Column(
-                  children: [
-                    _buildAppListItem(
-                      context,
-                      app.name,
-                      app.packageName,
-                      Icons.apps,
-                      AppColors.primary,
-                      app.isBlocked,
-                      app,
-                    ),
-                    if (app != nonBlockedApps.take(5).last) const Divider(),
-                  ],
-                )),
-                if (nonBlockedApps.length > 5) ...[
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () {
-                      _showAllAvailableApps(context, nonBlockedApps);
-                    },
-                    child: Text('View All ${nonBlockedApps.length} Available Apps'),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          _buildAppsList(context, nonBlockedApps),
       ],
     );
   }
 
-  void _showAllAvailableApps(BuildContext context, List<BlockedApp> apps) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('All Available Apps'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: apps.length,
-            itemBuilder: (context, index) {
-              final app = apps[index];
-              return ListTile(
-                leading: const Icon(Icons.apps, color: AppColors.primary),
-                title: Text(app.name),
-                subtitle: Text(app.packageName),
-                trailing: Switch(
-                  value: app.isBlocked,
-                  onChanged: (value) {
-                    context.read<BlockSetupBloc>().add(
-                      ToggleAppBlocking(app, value),
-                    );
-                  },
+  Widget _buildEmptyState(BuildContext context) {
+    if (state.searchQuery.isNotEmpty) {
+      return AppCard(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 48,
+                  color: AppColors.onSurfaceVariant,
                 ),
-              );
-            },
+                const SizedBox(height: 16),
+                Text(
+                  'No apps found',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try a different search term',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      );
+    } else {
+      return AppCard(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  size: 48,
+                  color: AppColors.success,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'All apps are blocked',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You have maximum protection enabled',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildAppsList(BuildContext context, List<BlockedApp> apps) {
+    return Column(
+      children: [
+        AppCard(
+          child: Column(
+            children: [
+              ...apps.map((app) => Column(
+                children: [
+                  _buildAppListItem(
+                    context,
+                    app.name,
+                    app.packageName,
+                    Icons.apps,
+                    AppColors.primary,
+                    app.isBlocked,
+                    app,
+                  ),
+                  if (app != apps.last) const Divider(),
+                ],
+              )),
+            ],
+          ),
+        ),
+        
+        // Pagination controls
+        if (state.hasMoreApps || state.isLoadingMore) ...[
+          const SizedBox(height: 16),
+          _buildPaginationControls(context),
         ],
-      ),
+      ],
+    );
+  }
+
+  Widget _buildPaginationControls(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (state.isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text('Loading more apps...'),
+              ],
+            ),
+          )
+        else if (state.hasMoreApps)
+          ElevatedButton.icon(
+            onPressed: () {
+              context.read<BlockSetupBloc>().add(LoadMoreApps());
+            },
+            icon: const Icon(Icons.expand_more),
+            label: Text('Load ${state.appsPerPage} More'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check,
+                  color: AppColors.success,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'All apps loaded',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.success,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -825,6 +1156,79 @@ class _AvailableAppsSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  String _getSubtitleText(BlockSetupLoaded state) {
+    if (state.searchQuery.isNotEmpty) {
+      final totalResults = state.installedApps
+          .where((app) => !app.isBlocked && 
+              (app.name.toLowerCase().contains(state.searchQuery.toLowerCase()) ||
+               app.packageName.toLowerCase().contains(state.searchQuery.toLowerCase())))
+          .length;
+      return 'Found $totalResults apps matching your search';
+    } else {
+      return 'Prioritized social media and distracting apps';
+    }
+  }
+}
+
+class _SkeletonBox extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    this.borderRadius = 4,
+  });
+
+  @override
+  State<_SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<_SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _animation = Tween<double>(begin: 0.1, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _animationController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: AppColors.onSurfaceVariant.withOpacity(0.1 * _animation.value),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+          ),
+        );
+      },
     );
   }
 }

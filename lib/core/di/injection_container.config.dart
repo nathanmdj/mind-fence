@@ -13,6 +13,13 @@ import 'package:flutter/services.dart' as _i281;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
 import 'package:mind_fence/core/di/injection_container.dart' as _i92;
+import 'package:mind_fence/core/services/app_lifecycle_service.dart' as _i685;
+import 'package:mind_fence/core/services/permission_error_handler.dart'
+    as _i733;
+import 'package:mind_fence/core/services/permission_retry_service.dart' as _i99;
+import 'package:mind_fence/core/services/permission_service.dart' as _i97;
+import 'package:mind_fence/core/services/permission_status_service.dart'
+    as _i1067;
 import 'package:mind_fence/features/block_setup/data/repositories/blocking_repository_impl.dart'
     as _i647;
 import 'package:mind_fence/features/block_setup/domain/repositories/blocking_repository.dart'
@@ -77,6 +84,9 @@ extension GetItInjectableX on _i174.GetIt {
       environmentFilter,
     );
     final registerModule = _$RegisterModule();
+    gh.factory<_i685.AppLifecycleService>(() => _i685.AppLifecycleService());
+    gh.factory<_i733.PermissionErrorHandler>(
+        () => _i733.PermissionErrorHandler());
     gh.factory<_i178.PlatformService>(() => _i178.PlatformService());
     await gh.singletonAsync<_i460.SharedPreferences>(
       () => registerModule.sharedPreferences,
@@ -86,6 +96,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i281.MethodChannel>(
         () => registerModule.deviceControlChannel);
     gh.singleton<_i294.DatabaseService>(() => _i294.DatabaseService());
+    gh.factory<_i97.PermissionService>(() => _i97.PermissionService(
+          gh<_i178.PlatformService>(),
+          gh<_i733.PermissionErrorHandler>(),
+        ));
     gh.factory<_i542.BlockedAppsDataSource>(
         () => _i542.BlockedAppsDataSourceImpl(
               gh<_i178.PlatformService>(),
@@ -96,12 +110,26 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i460.SharedPreferences>(),
           gh<_i178.PlatformService>(),
         ));
+    gh.factory<_i99.PermissionRetryService>(() => _i99.PermissionRetryService(
+          gh<_i97.PermissionService>(),
+          gh<_i733.PermissionErrorHandler>(),
+        ));
     gh.factory<_i1052.PreferencesService>(
         () => _i1052.PreferencesService(gh<_i294.DatabaseService>()));
+    gh.factory<_i1067.PermissionStatusService>(
+        () => _i1067.PermissionStatusService(
+              gh<_i97.PermissionService>(),
+              gh<_i685.AppLifecycleService>(),
+            ));
     gh.factory<_i754.EmergencyOverrideDataSource>(() =>
         _i754.EmergencyOverrideDataSourceImpl(gh<_i294.DatabaseService>()));
     gh.factory<_i134.ScheduleDataSource>(
         () => _i134.ScheduleDataSourceImpl(gh<_i294.DatabaseService>()));
+    gh.factory<_i99.EnhancedPermissionService>(
+        () => _i99.EnhancedPermissionService(
+              gh<_i99.PermissionRetryService>(),
+              gh<_i97.PermissionService>(),
+            ));
     gh.factory<_i470.ScheduleRepository>(
         () => _i348.ScheduleRepositoryImpl(gh<_i134.ScheduleDataSource>()));
     gh.factory<_i904.ToggleAppBlocking>(
@@ -112,12 +140,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i319.GetInstalledApps(gh<_i895.BlockingRepository>()));
     gh.factory<_i41.BlockedAppsRepository>(() =>
         _i599.BlockedAppsRepositoryImpl(gh<_i542.BlockedAppsDataSource>()));
-    gh.factory<_i161.BlockSetupBloc>(() => _i161.BlockSetupBloc(
-          gh<_i319.GetInstalledApps>(),
-          gh<_i904.ToggleAppBlocking>(),
-          gh<_i967.RequestPermissions>(),
-          gh<_i895.BlockingRepository>(),
-        ));
     gh.factory<_i334.GetCurrentActiveSchedule>(
         () => _i334.GetCurrentActiveSchedule(gh<_i470.ScheduleRepository>()));
     gh.factory<_i493.CreateSchedule>(
@@ -129,6 +151,14 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i601.EmergencyOverrideRepository>(() =>
         _i702.EmergencyOverrideRepositoryImpl(
             gh<_i754.EmergencyOverrideDataSource>()));
+    gh.factory<_i161.BlockSetupBloc>(() => _i161.BlockSetupBloc(
+          gh<_i319.GetInstalledApps>(),
+          gh<_i904.ToggleAppBlocking>(),
+          gh<_i967.RequestPermissions>(),
+          gh<_i895.BlockingRepository>(),
+          gh<_i97.PermissionService>(),
+          gh<_i1067.PermissionStatusService>(),
+        ));
     gh.factory<_i339.ScheduleService>(() => _i339.ScheduleService(
           gh<_i470.ScheduleRepository>(),
           gh<_i542.BlockedAppsDataSource>(),

@@ -7,6 +7,8 @@ import 'core/di/injection_container.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_bloc_observer.dart';
 import 'core/widgets/app_router.dart';
+import 'core/services/app_lifecycle_service.dart';
+import 'core/services/permission_status_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,11 +30,36 @@ void main() async {
     ),
   );
   
+  // Initialize app lifecycle service
+  final lifecycleService = getIt<AppLifecycleService>();
+  lifecycleService.initialize();
+  
+  // Initialize permission status service
+  final permissionStatusService = getIt<PermissionStatusService>();
+  await permissionStatusService.initialize();
+  
   runApp(const MindFenceApp());
 }
 
-class MindFenceApp extends StatelessWidget {
+class MindFenceApp extends StatefulWidget {
   const MindFenceApp({super.key});
+
+  @override
+  State<MindFenceApp> createState() => _MindFenceAppState();
+}
+
+class _MindFenceAppState extends State<MindFenceApp> {
+  @override
+  void dispose() {
+    // Clean up services
+    final lifecycleService = getIt<AppLifecycleService>();
+    lifecycleService.dispose();
+    
+    final permissionStatusService = getIt<PermissionStatusService>();
+    permissionStatusService.dispose();
+    
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

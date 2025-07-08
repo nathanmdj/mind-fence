@@ -10,6 +10,8 @@ abstract class BlockSetupEvent extends Equatable {
 
 class LoadInstalledApps extends BlockSetupEvent {}
 
+class LoadMoreApps extends BlockSetupEvent {}
+
 class LoadBlockedApps extends BlockSetupEvent {}
 
 class ToggleAppBlocking extends BlockSetupEvent {

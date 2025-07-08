@@ -22,6 +22,10 @@ class BlockSetupLoaded extends BlockSetupState {
   final bool hasOverlayPermission;
   final bool isBlocking;
   final String searchQuery;
+  final bool isLoadingMore;
+  final bool hasMoreApps;
+  final int currentPage;
+  final int appsPerPage;
 
   const BlockSetupLoaded({
     required this.installedApps,
@@ -33,6 +37,10 @@ class BlockSetupLoaded extends BlockSetupState {
     required this.hasOverlayPermission,
     required this.isBlocking,
     this.searchQuery = '',
+    this.isLoadingMore = false,
+    this.hasMoreApps = true,
+    this.currentPage = 1,
+    this.appsPerPage = 25,
   });
 
   BlockSetupLoaded copyWith({
@@ -45,6 +53,10 @@ class BlockSetupLoaded extends BlockSetupState {
     bool? hasOverlayPermission,
     bool? isBlocking,
     String? searchQuery,
+    bool? isLoadingMore,
+    bool? hasMoreApps,
+    int? currentPage,
+    int? appsPerPage,
   }) {
     return BlockSetupLoaded(
       installedApps: installedApps ?? this.installedApps,
@@ -56,6 +68,10 @@ class BlockSetupLoaded extends BlockSetupState {
       hasOverlayPermission: hasOverlayPermission ?? this.hasOverlayPermission,
       isBlocking: isBlocking ?? this.isBlocking,
       searchQuery: searchQuery ?? this.searchQuery,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      hasMoreApps: hasMoreApps ?? this.hasMoreApps,
+      currentPage: currentPage ?? this.currentPage,
+      appsPerPage: appsPerPage ?? this.appsPerPage,
     );
   }
 
@@ -70,6 +86,10 @@ class BlockSetupLoaded extends BlockSetupState {
     hasOverlayPermission,
     isBlocking,
     searchQuery,
+    isLoadingMore,
+    hasMoreApps,
+    currentPage,
+    appsPerPage,
   ];
 }
 

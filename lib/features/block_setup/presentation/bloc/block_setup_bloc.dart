@@ -7,6 +7,8 @@ import '../../domain/usecases/toggle_app_blocking.dart' as usecases;
 import '../../domain/usecases/request_permissions.dart' as usecases;
 import '../../domain/repositories/blocking_repository.dart';
 import '../../../../shared/domain/entities/blocked_app.dart';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/services/permission_status_service.dart';
 
 @injectable
 class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
@@ -14,14 +16,19 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
   final usecases.ToggleAppBlocking _toggleAppBlocking;
   final usecases.RequestPermissions _requestPermissions;
   final BlockingRepository _repository;
+  final PermissionService _permissionService;
+  final PermissionStatusService _permissionStatusService;
 
   BlockSetupBloc(
     this._getInstalledApps,
     this._toggleAppBlocking,
     this._requestPermissions,
     this._repository,
+    this._permissionService,
+    this._permissionStatusService,
   ) : super(BlockSetupInitial()) {
     on<LoadInstalledApps>(_onLoadInstalledApps);
+    on<LoadMoreApps>(_onLoadMoreApps);
     on<LoadBlockedApps>(_onLoadBlockedApps);
     on<ToggleAppBlocking>(_onToggleAppBlocking);
     on<RequestPermissions>(_onRequestPermissions);
@@ -42,33 +49,138 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
     try {
       emit(BlockSetupLoading());
       
-      final installedApps = await _getInstalledApps();
+      // Load all apps but paginate the display
+      final allInstalledApps = await _getInstalledApps();
       final blockedApps = await _repository.getBlockedApps();
-      final hasUsageStats = await _requestPermissions.hasUsageStatsPermission();
-      final hasAccessibility = await _requestPermissions.hasAccessibilityPermission();
-      final hasDeviceAdmin = await _requestPermissions.hasDeviceAdminPermission();
-      final hasOverlay = await _requestPermissions.hasOverlayPermission();
+      
+      // Use the new permission status service for real-time status
+      final permissionStatuses = await _permissionStatusService.checkAllPermissionStatus();
+      
+      final hasUsageStats = permissionStatuses[PermissionType.usageStats]?.isGranted ?? false;
+      final hasAccessibility = permissionStatuses[PermissionType.accessibility]?.isGranted ?? false;
+      final hasDeviceAdmin = permissionStatuses[PermissionType.deviceAdmin]?.isGranted ?? false;
+      final hasOverlay = permissionStatuses[PermissionType.overlay]?.isGranted ?? false;
       final isBlocking = await _repository.isBlocking();
       
-      // Merge installed apps with blocked status
-      final mergedApps = installedApps.map((app) {
-        final isBlocked = blockedApps.any((blocked) => blocked.packageName == app.packageName);
+      // Create blocked apps map for O(1) lookup
+      final blockedAppsMap = <String, bool>{};
+      for (final blockedApp in blockedApps) {
+        blockedAppsMap[blockedApp.packageName] = true;
+      }
+      
+      // Merge installed apps with blocked status using efficient lookup
+      final mergedApps = allInstalledApps.map((app) {
+        final isBlocked = blockedAppsMap.containsKey(app.packageName);
         return app.copyWith(isBlocked: isBlocked);
       }).toList();
+      
+      // Sort apps to prioritize social media apps
+      mergedApps.sort((a, b) {
+        final aSocial = _isSocialMediaApp(a.packageName);
+        final bSocial = _isSocialMediaApp(b.packageName);
+        
+        if (aSocial && !bSocial) return -1;
+        if (!aSocial && bSocial) return 1;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+      
+      // Initialize pagination
+      const appsPerPage = 25;
+      final paginatedApps = _getPaginatedApps(mergedApps, 1, appsPerPage);
+      final hasMoreApps = mergedApps.length > appsPerPage;
       
       emit(BlockSetupLoaded(
         installedApps: mergedApps,
         blockedApps: blockedApps,
-        filteredApps: mergedApps,
+        filteredApps: paginatedApps,
         hasUsageStatsPermission: hasUsageStats,
         hasAccessibilityPermission: hasAccessibility,
         hasDeviceAdminPermission: hasDeviceAdmin,
         hasOverlayPermission: hasOverlay,
         isBlocking: isBlocking,
+        hasMoreApps: hasMoreApps,
+        currentPage: 1,
+        appsPerPage: appsPerPage,
       ));
     } catch (e) {
       emit(BlockSetupError(e.toString()));
     }
+  }
+  
+  Future<void> _onLoadMoreApps(
+    LoadMoreApps event,
+    Emitter<BlockSetupState> emit,
+  ) async {
+    if (state is! BlockSetupLoaded) return;
+    
+    final currentState = state as BlockSetupLoaded;
+    
+    // Don't load if already loading or no more apps
+    if (currentState.isLoadingMore || !currentState.hasMoreApps) return;
+    
+    try {
+      // Show loading state
+      emit(currentState.copyWith(isLoadingMore: true));
+      
+      // Calculate next page
+      final nextPage = currentState.currentPage + 1;
+      final startIndex = (nextPage - 1) * currentState.appsPerPage;
+      final endIndex = startIndex + currentState.appsPerPage;
+      
+      // Filter apps based on current search query
+      final appsToFilter = currentState.searchQuery.isEmpty 
+          ? currentState.installedApps
+          : _filterApps(currentState.installedApps, currentState.searchQuery);
+      
+      // Get new batch of apps
+      final newApps = appsToFilter.skip(startIndex).take(currentState.appsPerPage).toList();
+      
+      // Combine with existing filtered apps
+      final updatedFilteredApps = [...currentState.filteredApps, ...newApps];
+      
+      // Check if there are more apps to load
+      final hasMoreApps = endIndex < appsToFilter.length;
+      
+      emit(currentState.copyWith(
+        filteredApps: updatedFilteredApps,
+        isLoadingMore: false,
+        hasMoreApps: hasMoreApps,
+        currentPage: nextPage,
+      ));
+    } catch (e) {
+      emit(currentState.copyWith(
+        isLoadingMore: false,
+      ));
+    }
+  }
+  
+  List<BlockedApp> _getPaginatedApps(List<BlockedApp> apps, int page, int appsPerPage) {
+    final startIndex = (page - 1) * appsPerPage;
+    final endIndex = startIndex + appsPerPage;
+    
+    if (startIndex >= apps.length) return [];
+    
+    return apps.sublist(startIndex, endIndex.clamp(0, apps.length));
+  }
+  
+  bool _isSocialMediaApp(String packageName) {
+    final socialMediaApps = {
+      'com.facebook.katana',
+      'com.instagram.android',
+      'com.twitter.android',
+      'com.snapchat.android',
+      'com.linkedin.android',
+      'com.pinterest',
+      'com.tiktok.musically',
+      'com.reddit.frontpage',
+      'com.tumblr',
+      'com.discord',
+      'com.whatsapp',
+      'com.telegram.messenger',
+      'com.zhiliaoapp.musically',
+    };
+    
+    return socialMediaApps.contains(packageName);
   }
 
   Future<void> _onLoadBlockedApps(
@@ -175,19 +287,26 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
     Emitter<BlockSetupState> emit,
   ) async {
     try {
+      PermissionType? permissionType;
+      
       switch (event.permissionType) {
         case 'usage_stats':
-          await _requestPermissions.requestUsageStatsPermission();
+          permissionType = PermissionType.usageStats;
           break;
         case 'accessibility':
-          await _requestPermissions.requestAccessibilityPermission();
+          permissionType = PermissionType.accessibility;
           break;
         case 'device_admin':
-          await _requestPermissions.requestDeviceAdminPermission();
+          permissionType = PermissionType.deviceAdmin;
           break;
         case 'overlay':
-          await _requestPermissions.requestOverlayPermission();
+          permissionType = PermissionType.overlay;
           break;
+      }
+      
+      if (permissionType != null) {
+        // Use the new permission status service
+        await _permissionStatusService.requestPermission(permissionType);
       }
       
       // Wait a moment for the user to potentially grant the permission
@@ -212,10 +331,14 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
     try {
       if (state is BlockSetupLoaded) {
         final currentState = state as BlockSetupLoaded;
-        final hasUsageStats = await _requestPermissions.hasUsageStatsPermission();
-        final hasAccessibility = await _requestPermissions.hasAccessibilityPermission();
-        final hasDeviceAdmin = await _requestPermissions.hasDeviceAdminPermission();
-        final hasOverlay = await _requestPermissions.hasOverlayPermission();
+        
+        // Use the new permission status service for real-time updates
+        final permissionStatuses = await _permissionStatusService.checkAllPermissionStatus();
+        
+        final hasUsageStats = permissionStatuses[PermissionType.usageStats]?.isGranted ?? false;
+        final hasAccessibility = permissionStatuses[PermissionType.accessibility]?.isGranted ?? false;
+        final hasDeviceAdmin = permissionStatuses[PermissionType.deviceAdmin]?.isGranted ?? false;
+        final hasOverlay = permissionStatuses[PermissionType.overlay]?.isGranted ?? false;
         
         emit(currentState.copyWith(
           hasUsageStatsPermission: hasUsageStats,
@@ -270,11 +393,18 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
   ) async {
     if (state is BlockSetupLoaded) {
       final currentState = state as BlockSetupLoaded;
-      final filteredApps = _filterApps(currentState.installedApps, event.query);
+      final allFilteredApps = _filterApps(currentState.installedApps, event.query);
+      
+      // Reset to first page when searching
+      final paginatedApps = _getPaginatedApps(allFilteredApps, 1, currentState.appsPerPage);
+      final hasMoreApps = allFilteredApps.length > currentState.appsPerPage;
       
       emit(currentState.copyWith(
-        filteredApps: filteredApps,
+        filteredApps: paginatedApps,
         searchQuery: event.query,
+        currentPage: 1,
+        hasMoreApps: hasMoreApps,
+        isLoadingMore: false,
       ));
     }
   }
@@ -294,7 +424,15 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
   ) async {
     try {
       emit(PermissionRequesting());
-      await _requestPermissions.requestAllPermissions();
+      
+      // Use the new permission service for comprehensive permission handling
+      final result = await _permissionService.requestAllPermissions();
+      
+      // Check if critical permissions were denied
+      if (result.criticalDenied) {
+        emit(PermissionDenied('Critical permissions were denied. The app requires usage stats and accessibility permissions to function properly.'));
+        return;
+      }
       
       // Wait a moment then check permissions
       await Future.delayed(const Duration(seconds: 1));
@@ -309,7 +447,8 @@ class BlockSetupBloc extends Bloc<BlockSetupEvent, BlockSetupState> {
     Emitter<BlockSetupState> emit,
   ) async {
     try {
-      await _requestPermissions.openAppSettings();
+      // Open general app settings - users can navigate to specific permissions from there
+      await _permissionService.openPermissionSettings(PermissionType.usageStats);
       
       // Wait a moment then check permissions
       await Future.delayed(const Duration(seconds: 1));

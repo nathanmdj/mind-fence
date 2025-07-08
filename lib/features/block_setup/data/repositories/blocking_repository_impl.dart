@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,22 +12,87 @@ class BlockingRepositoryImpl implements BlockingRepository {
   final SharedPreferences _prefs;
   final PlatformService _platformService;
 
+  static const String _installedAppsKey = 'cached_installed_apps';
+  static const String _installedAppsTimestampKey = 'cached_installed_apps_timestamp';
+  static const Duration _cacheValidDuration = Duration(hours: 24);
+
   BlockingRepositoryImpl(this._channel, this._prefs, this._platformService);
 
   @override
   Future<List<BlockedApp>> getInstalledApps() async {
     try {
-      final List<dynamic> apps = await _channel.invokeMethod('getInstalledApps');
-      return apps.map((app) => BlockedApp(
-        id: app['packageName'],
-        name: app['appName'],
-        packageName: app['packageName'],
-        iconPath: '',
-        isBlocked: false,
-      )).toList();
+      // Check if we have valid cached data
+      final cachedApps = await _getCachedInstalledApps();
+      if (cachedApps != null) {
+        return cachedApps;
+      }
+
+      // If no valid cache, fetch fresh data
+      return await _fetchAndCacheInstalledApps();
     } catch (e) {
       throw Exception('Failed to get installed apps: $e');
     }
+  }
+
+  Future<List<BlockedApp>?> _getCachedInstalledApps() async {
+    try {
+      final cachedAppsJson = _prefs.getString(_installedAppsKey);
+      final cachedTimestamp = _prefs.getInt(_installedAppsTimestampKey);
+      
+      if (cachedAppsJson == null || cachedTimestamp == null) {
+        return null;
+      }
+      
+      final cacheTime = DateTime.fromMillisecondsSinceEpoch(cachedTimestamp);
+      final isExpired = DateTime.now().difference(cacheTime) > _cacheValidDuration;
+      
+      if (isExpired) {
+        return null;
+      }
+      
+      final List<dynamic> cachedData = jsonDecode(cachedAppsJson);
+      return cachedData.map((app) => BlockedApp(
+        id: app['packageName'],
+        name: app['appName'],
+        packageName: app['packageName'],
+        iconPath: app['iconPath'] ?? '',
+        isBlocked: false,
+      )).toList();
+    } catch (e) {
+      // If cache is corrupted, return null to trigger fresh fetch
+      return null;
+    }
+  }
+
+  Future<List<BlockedApp>> _fetchAndCacheInstalledApps() async {
+    final List<dynamic> apps = await _channel.invokeMethod('getInstalledApps');
+    
+    // Cache the raw data for future use
+    await _prefs.setString(_installedAppsKey, jsonEncode(apps));
+    await _prefs.setInt(_installedAppsTimestampKey, DateTime.now().millisecondsSinceEpoch);
+    
+    return apps.map((app) => BlockedApp(
+      id: app['packageName'],
+      name: app['appName'],
+      packageName: app['packageName'],
+      iconPath: app['iconPath'] ?? '',
+      isBlocked: false,
+    )).toList();
+  }
+
+  /// Force refresh the cached installed apps
+  Future<List<BlockedApp>> refreshInstalledApps() async {
+    try {
+      return await _fetchAndCacheInstalledApps();
+    } catch (e) {
+      throw Exception('Failed to refresh installed apps: $e');
+    }
+  }
+
+  /// Clear the installed apps cache
+  Future<void> clearInstalledAppsCache() async {
+    await _prefs.remove(_installedAppsKey);
+    await _prefs.remove(_installedAppsTimestampKey);
   }
 
   @override

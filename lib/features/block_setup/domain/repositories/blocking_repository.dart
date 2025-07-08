@@ -2,6 +2,8 @@ import '../../../../shared/domain/entities/blocked_app.dart';
 
 abstract class BlockingRepository {
   Future<List<BlockedApp>> getInstalledApps();
+  Future<List<BlockedApp>> refreshInstalledApps();
+  Future<void> clearInstalledAppsCache();
   Future<List<BlockedApp>> getBlockedApps();
   Future<void> addBlockedApp(BlockedApp app);
   Future<void> removeBlockedApp(String packageName);

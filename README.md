@@ -1,5 +1,6 @@
 # Mind Fence - Social Media Blocking App
 
+
 A comprehensive Flutter application designed to help users increase productivity by blocking social media apps and managing digital distractions. Mind Fence provides system-level blocking capabilities with native integrations for both Android and iOS platforms.
 
 ## Features
